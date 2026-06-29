@@ -1,3 +1,3 @@
 module github.com/paaavkata/go-events
 
-go 1.23.3
+go 1.26.4
