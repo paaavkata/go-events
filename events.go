@@ -1,4 +1,4 @@
-// Package events defines the canonical Kafka event schema shared across all services.
+// Package events defines the canonical event schema (published via NATS JetStream) shared across all services.
 // The PaymentEvent envelope is published by payment-service and consumed by
 // usage-service and service-service.
 package events
@@ -22,7 +22,7 @@ const (
 	EventCreditsPurchased        = "credits.purchased"
 )
 
-// PaymentEvent is the canonical Kafka message envelope for all payment events.
+// PaymentEvent is the canonical message envelope (published via NATS JetStream) for all payment events.
 // Data holds the event-specific payload as a raw JSON object; use Decode to
 // unmarshal it into the appropriate typed struct.
 type PaymentEvent struct {

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// AuditTopic is the single canonical Kafka topic for the platform audit log.
+// AuditTopic is the single canonical NATS JetStream topic for the platform audit log.
 // Every service that performs an audited action publishes an AuditEvent here,
 // partition-keyed by app_id, and event-service is the sole consumer/sink.
 const AuditTopic = "audit-events"
@@ -39,9 +39,9 @@ type AuditTarget struct {
 }
 
 // AuditEvent is the canonical envelope for the platform audit log. Every audited
-// action across every service is published to the Kafka topic AuditTopic
-// ("audit-events"), partition-keyed by AppID, and consumed and stored by
-// event-service.
+// action across every service is published via NATS JetStream to the topic
+// AuditTopic ("audit-events"), partition-keyed by AppID, and consumed and
+// stored by event-service.
 //
 // It is intentionally generic: event-service validates and stores it but never
 // interprets Type, Service or Metadata. AppID is REQUIRED and is never defaulted
