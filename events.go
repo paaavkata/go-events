@@ -83,10 +83,48 @@ type PaymentFailedData struct {
 	SubscriptionUID string `json:"subscription_uid"`
 }
 
+// Reasons a payment.refunded event was emitted.
+const (
+	// RefundReasonRefund — the merchant or the customer refunded the charge.
+	RefundReasonRefund = "refund"
+	// RefundReasonDispute — the customer disputed (charged back) the payment.
+	// The money is withheld immediately, before the dispute is decided, so
+	// consumers should treat it exactly like a refund rather than waiting.
+	RefundReasonDispute = "dispute"
+)
+
 // PaymentRefundedData is the payload for payment.refunded.
+//
+// It is what lets a consumer reverse whatever the payment bought — above all
+// usage-service, which claws back purchased credits. The envelope carries the
+// subject (app_id + customer_uid/user_id/org_id); this payload carries the
+// money and what it was for.
+//
+// All fields after AmountCents are additive (added for the refund clawback
+// path) and omitempty, so a producer or consumer on an older build still reads
+// and writes a valid document.
 type PaymentRefundedData struct {
-	PaymentUID  string `json:"payment_uid"`
-	AmountCents int    `json:"amount_cents"`
+	// PaymentUID identifies the local payments row being reversed.
+	PaymentUID string `json:"payment_uid"`
+	// AmountCents is the amount refunded — NOT necessarily the original charge:
+	// a partial refund reports only the part returned.
+	AmountCents int `json:"amount_cents"`
+	// Credits is how many credits the refunded amount bought, prorated for a
+	// partial refund. Zero means the payment granted no credits (e.g. a
+	// subscription invoice), not "unknown".
+	Credits int `json:"credits,omitempty"`
+	// Currency of AmountCents (ISO 4217, lowercase as the provider reports it).
+	Currency string `json:"currency,omitempty"`
+	// ProviderPaymentID is the provider's charge/payment-intent id, for
+	// reconciliation against the provider's own records.
+	ProviderPaymentID string `json:"provider_payment_id,omitempty"`
+	// ProviderEventID is the provider event that triggered this refund. It is
+	// ALSO the envelope's EventID, and is the stable key consumers dedupe the
+	// clawback on: delivery is at-least-once, and a credit clawback must not
+	// apply twice.
+	ProviderEventID string `json:"provider_event_id,omitempty"`
+	// Reason is RefundReasonRefund or RefundReasonDispute.
+	Reason string `json:"reason,omitempty"`
 }
 
 // CreditsPurchasedData is the payload for credits.purchased.

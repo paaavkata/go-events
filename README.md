@@ -15,6 +15,7 @@ Package name: `events`.
 - **`PaymentEvent`** (`events.go`) — canonical envelope for payment/subscription events, published by payment-service and consumed by usage-service and service-service. Fields: `Version`, `MessageType`, `Producer`, `Timestamp`, `CorrelationID`, `EventID`, `AppID`, `CustomerUID`, `UserID`, `OrgID`, `Data` (raw JSON payload).
   - Event type constants: `EventCustomerCreated`, `EventSubscriptionCreated`, `EventSubscriptionRenewed`, `EventSubscriptionCanceled`, `EventSubscriptionPlanChanged`, `EventPaymentSucceeded`, `EventPaymentFailed`, `EventPaymentRefunded`, `EventCreditsPurchased`.
   - Typed payloads: `CustomerCreatedData`, `SubscriptionData`, `SubscriptionCanceledData`, `PaymentSucceededData`, `PaymentFailedData`, `PaymentRefundedData`, `CreditsPurchasedData`.
+  - Refund reasons: `RefundReasonRefund`, `RefundReasonDispute` (a dispute withholds the money immediately, so consumers reverse it like a refund).
   - `(*PaymentEvent) Decode(dst interface{}) error` — unmarshals `Data` into a typed payload struct.
 - **`AuditEvent`** (`audit.go`) — canonical envelope for the platform audit log; every audited action from every service is published to the `AuditTopic` topic, partition-keyed by `AppID`, and consumed/stored solely by event-service. Fields: `Version`, `UID`, `AppID` (required), `Type`, `Service`, `Timestamp`, `Trace`, `Actor` (`AuditActor`), `Severity`, `Target` (`*AuditTarget`), `Message`, `Metadata` (raw JSON).
   - `AuditTopic = "audit-events"`, `AuditConsumerGroup = "event-service-group"`.
