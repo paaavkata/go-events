@@ -1,19 +1,54 @@
 package events
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 )
 
-// AuditTopic is the single canonical NATS JetStream topic for the platform audit log.
-// Every service that performs an audited action publishes an AuditEvent here,
-// partition-keyed by app_id, and event-service is the sole consumer/sink.
+// AuditTopic is the base topic of the platform audit log: the JetStream stream
+// "audit-events" and the base of its app-scoped subjects. Every service that
+// performs an audited action publishes an AuditEvent on AuditSubject(app_id)
+// ("audit-events.<app_id>") via PublishAudit; event-service is the sole
+// consumer/sink. The flat subject "audit-events" is legacy (pre-scoping) and
+// is still captured by the same stream during cutover.
 const AuditTopic = "audit-events"
 
 // AuditConsumerGroup is the canonical consumer group used by event-service.
 const AuditConsumerGroup = "event-service-group"
+
+// AuditSubject returns the app-scoped subject an audit event for appID is
+// published on: "audit-events.<appID>". It mirrors go-nats ScopedSubject
+// without validating; publishing through go-nats validates appID.
+func AuditSubject(appID string) string {
+	return AuditTopic + "." + appID
+}
+
+// AuditPublisher publishes one value on the app-scoped subject of its base
+// topic. *gonats.Producer (github.com/paaavkata/go-nats) created with
+// Topic: AuditTopic satisfies it; the interface keeps this package free of a
+// transport dependency.
+type AuditPublisher interface {
+	SendScopedWithMsgID(ctx context.Context, appID, key, msgID string, value interface{}) error
+}
+
+// PublishAudit validates e and publishes it on AuditSubject(e.AppID), keyed by
+// AppID, with the event UID as the Nats-Msg-Id so a retried publish inside the
+// stream's duplicate window is stored once.
+func PublishAudit(ctx context.Context, p AuditPublisher, e *AuditEvent) error {
+	if err := e.Validate(); err != nil {
+		return fmt.Errorf("publish audit event: %w", err)
+	}
+	if p == nil {
+		return errors.New("publish audit event: publisher is nil")
+	}
+	if err := p.SendScopedWithMsgID(ctx, e.AppID, e.AppID, e.UID, e); err != nil {
+		return fmt.Errorf("publish audit event %s (%s): %w", e.UID, e.Type, err)
+	}
+	return nil
+}
 
 // Actor type constants. Actors reuse the generic (type, uid) Subject identity
 // shape used across the platform rather than a domain-specific identity tuple.
@@ -39,9 +74,9 @@ type AuditTarget struct {
 }
 
 // AuditEvent is the canonical envelope for the platform audit log. Every audited
-// action across every service is published via NATS JetStream to the topic
-// AuditTopic ("audit-events"), partition-keyed by AppID, and consumed and
-// stored by event-service.
+// action across every service is published via NATS JetStream on the
+// app-scoped subject AuditSubject(AppID) ("audit-events.<app_id>", stream
+// AuditTopic) with PublishAudit, and consumed and stored by event-service.
 //
 // It is intentionally generic: event-service validates and stores it but never
 // interprets Type, Service or Metadata. AppID is REQUIRED and is never defaulted
