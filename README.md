@@ -24,6 +24,7 @@ Package name: `events`.
   - Actor type constants: `ActorTypeUser`, `ActorTypeAnonymous`, `ActorTypeService`, `ActorTypeSystem`.
   - `(*AuditEvent) Validate() error` — rejects an event missing `app_id`, `type`, or `uid`.
   - `(*AuditEvent) DecodeMetadata(dst interface{}) error` — unmarshals `Metadata` into a typed struct.
+  - Which actions MUST be audited, actor/target/metadata conventions and severity mapping: [`AUDIT.md`](AUDIT.md).
 
 ## Usage example
 
